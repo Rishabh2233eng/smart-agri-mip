@@ -1,0 +1,16 @@
+strategy,commodity,avg_net_Rs_per_qtl,p10_net_Rs_per_qtl,regret_vs_oracle,uplift_vs_sell_now_%,n_decisions
+Proposed (forecast + risk-aware),Wheat,2884.6,2476.47,68.22,6.46,30
+Median forecast (no risk term),Wheat,2921.81,2540.48,31.02,7.84,30
+Naive (no forecast),Wheat,2875.77,2498.86,77.06,6.14,30
+Sell now at home,Wheat,2709.45,2355.23,243.38,0.0,30
+Oracle (perfect hindsight),Wheat,2952.83,2541.18,0.0,8.98,30
+Proposed (forecast + risk-aware),Tomato,2705.37,2052.1,7.79,6.8,30
+Median forecast (no risk term),Tomato,2705.37,2052.1,7.79,6.8,30
+Naive (no forecast),Tomato,2705.37,2052.1,7.79,6.8,30
+Sell now at home,Tomato,2533.13,1950.36,180.03,0.0,30
+Oracle (perfect hindsight),Tomato,2713.16,2052.1,0.0,7.11,30
+Proposed (forecast + risk-aware),Onion,2386.79,1618.72,78.23,8.22,30
+Median forecast (no risk term),Onion,2424.92,1619.46,40.09,9.95,30
+Naive (no forecast),Onion,2358.3,1580.64,106.71,6.93,30
+Sell now at home,Onion,2205.54,1544.03,259.47,0.0,30
+Oracle (perfect hindsight),Onion,2465.01,1685.6,0.0,11.76,30

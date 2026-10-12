@@ -1,35 +1,27 @@
-"""Cost-aware, risk-aware sell-timing and market-selection engine.
-All cost numbers are ASSUMPTIONS for Day 1: replace with sourced values on Day 3."""
+"""Cost-aware, risk-aware sell-timing and market-selection engine."""
 import numpy as np
 import pandas as pd
-from .data import MARKETS, HOME
+from . import config as C
 
 HORIZONS = (7, 14)
-DIST_KM = {"Faridabad": 0, "Azadpur": 45, "Ghazipur": 50}
-TRANSPORT_PER_QTL_KM = 0.5      # Rs per quintal per km
-COMMISSION = 0.02               # mandi commission on sale value
-ASSUMP = {                      # spoil: fraction lost per day, store: Rs/qtl/day
-    "Wheat":  dict(spoil=0.0002, store=0.5),
-    "Tomato": dict(spoil=0.015,  store=3.0),
-    "Onion":  dict(spoil=0.002,  store=1.0),
-}
 
 
 def net_value(price, comm, market, h):
-    a = ASSUMP[comm]
+    a = C.ASSUMP[comm]
     keep = (1 - a["spoil"]) ** h
-    return price * keep * (1 - COMMISSION) - TRANSPORT_PER_QTL_KM * DIST_KM[market] - a["store"] * h
+    return (price * keep * (1 - C.COMMISSION)
+            - C.TRANSPORT_PER_QTL_KM * C.DIST_KM.get(market, 50) - a["store"] * h)
 
 
 def score(df, comm, med_col, lo_col, lam):
     nm = np.array([net_value(p, comm, m, h) for p, m, h in zip(df[med_col], df["market"], df["h"])])
     nl = np.array([net_value(p, comm, m, h) for p, m, h in zip(df[lo_col], df["market"], df["h"])])
-    return nm - lam * (nm - nl)       # risk-adjusted: penalise gap to worst case
+    return nm - lam * (nm - nl)
 
 
-def recommend(comm, qty, price_now, latest, lam=0.5):
+def recommend(comm, qty, markets, price_now, latest, lam=0.5):
     rows = []
-    for m in MARKETS:
+    for m in markets:
         rows.append((m, 0, price_now[m], price_now[m]))
         for h in HORIZONS:
             lo, med, hi = latest[(m, h)]
@@ -43,9 +35,9 @@ def recommend(comm, qty, price_now, latest, lam=0.5):
     return df.sort_values("risk_score", ascending=False).round(1).reset_index(drop=True)
 
 
-def build_options(fc, d):
+def build_options(fc, markets, d):
     rows = []
-    for m in MARKETS:
+    for m in markets:
         pn = fc[(m, 7)]["out"].loc[d, "price_now"]
         rows.append(dict(market=m, h=0, p_lo=pn, p_med=pn, p_naive=pn, actual=pn))
         for h in HORIZONS:
@@ -55,42 +47,54 @@ def build_options(fc, d):
     return pd.DataFrame(rows)
 
 
-def backtest(comm, fc, lam=0.5, step=7):
+def boot_ci(d, n=2000, seed=0):
+    rng = np.random.default_rng(seed)
+    means = [rng.choice(d, len(d)).mean() for _ in range(n)]
+    return np.percentile(means, [2.5, 97.5])
+
+
+def backtest(comm, fc, markets, home, lams=(0.0, 0.25, 0.5, 0.75, 1.0), step=7):
     dates = None
     for v in fc.values():
         idx = v["out"].index
         dates = idx if dates is None else dates.intersection(idx)
     dates = dates[::step]
+    if len(dates) < 5:
+        raise ValueError(f"Too few backtest dates for {comm}")
 
-    strategies = {
-        "Proposed (forecast + risk-aware)": ("p_med", "p_lo", lam),
-        "Median forecast (no risk term)":   ("p_med", "p_lo", 0.0),
-        "Naive (no forecast)":              ("p_naive", "p_naive", 0.0),
-    }
-    res = {k: [] for k in strategies}
+    naive_name = "Naive (no forecast)"
+    names = [naive_name] + [f"Forecast lam={l}" for l in lams]
+    res = {n: [] for n in names}
     res["Sell now at home"] = []
     res["Oracle (perfect hindsight)"] = []
 
     for d in dates:
-        opts = build_options(fc, d)
+        opts = build_options(fc, markets, d)
         real = np.array([net_value(a, comm, m, h)
                          for a, m, h in zip(opts["actual"], opts["market"], opts["h"])])
-        for name, (med, lo, l) in strategies.items():
-            sc = score(opts, comm, med, lo, l)
-            res[name].append(real[int(np.argmax(sc))])
-        home_i = opts[(opts["market"] == HOME) & (opts["h"] == 0)].index[0]
+        sc = score(opts, comm, "p_naive", "p_naive", 0.0)
+        res[naive_name].append(real[int(np.argmax(sc))])
+        for l in lams:
+            sc = score(opts, comm, "p_med", "p_lo", l)
+            res[f"Forecast lam={l}"].append(real[int(np.argmax(sc))])
+        home_i = opts[(opts["market"] == home) & (opts["h"] == 0)].index[0]
         res["Sell now at home"].append(real[home_i])
         res["Oracle (perfect hindsight)"].append(real.max())
 
-    oracle = np.mean(res["Oracle (perfect hindsight)"])
-    home = np.mean(res["Sell now at home"])
+    naive = np.array(res[naive_name])
+    oracle_mean = np.mean(res["Oracle (perfect hindsight)"])
+    home_mean = np.mean(res["Sell now at home"])
     rows = []
     for k, v in res.items():
         v = np.array(v)
+        d = v - naive
+        lo, hi = boot_ci(d)
         rows.append({"strategy": k, "commodity": comm,
                      "avg_net_Rs_per_qtl": v.mean(),
                      "p10_net_Rs_per_qtl": np.percentile(v, 10),
-                     "regret_vs_oracle": oracle - v.mean(),
-                     "uplift_vs_sell_now_%": (v.mean() / home - 1) * 100,
+                     "regret_vs_oracle": oracle_mean - v.mean(),
+                     "uplift_vs_sell_now_%": (v.mean() / home_mean - 1) * 100,
+                     "gain_vs_naive_Rs": d.mean(),
+                     "gain_vs_naive_CI95": f"[{lo:.1f}, {hi:.1f}]",
                      "n_decisions": len(v)})
     return pd.DataFrame(rows)
