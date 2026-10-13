@@ -82,13 +82,22 @@ def cmd_ping():
               "or use the CEDA downloads instead.")
         return
     print(f"HTTP {r.status_code} in {time.time() - t:.1f}s")
+    if r.status_code == 200:
+        try:
+            j = r.json()
+            print("title:", j.get("title"))
+            print("total records:", j.get("total"), "| updated:", j.get("updated_date"))
+            print("fields:", [f.get("id") for f in j.get("field", [])])
+            print("sample record:", (j.get("records") or [{}])[0])
+        except ValueError:
+            print(r.text[:400])
+        print("-> Works. Check the title says mandi/commodity prices, then run: python data_tools.py probe")
+        return
     print(r.text[:400])
     if r.status_code in (401, 403):
         print("-> Key rejected. Regenerate it on data.gov.in and update .env")
     elif r.status_code == 404:
         print("-> Resource id wrong. Copy the id from the dataset's API tab into .env as DATAGOV_RESOURCE_ID=...")
-    elif r.status_code == 200:
-        print("-> Works. Now run: python data_tools.py probe")
 
 
 def cmd_probe():
@@ -116,7 +125,14 @@ def cmd_snapshot():
             except requests.RequestException as e:
                 print(f"{s} / {c}: failed ({type(e).__name__}), skipping")
                 continue
-            n = db.upsert(pd.DataFrame(recs), "datagov_snapshot") if recs else 0
+            if not recs:
+                print(f"{s} / {c}: 0 records returned")
+                continue
+            try:
+                n = db.upsert(pd.DataFrame(recs), "datagov_snapshot")
+            except ValueError as e:
+                print(f"{s} / {c}: could not save - {e}")
+                continue
             total += n
             print(f"{s} / {c}: {n} rows saved")
     print("Total saved:", total)
@@ -141,7 +157,10 @@ def cmd_backfill(days):
                     got_any = True      # a failure is not evidence of "no data"
                     continue
                 if recs:
-                    db.upsert(pd.DataFrame(recs), "datagov_backfill")
+                    try:
+                        db.upsert(pd.DataFrame(recs), "datagov_backfill")
+                    except ValueError as e:
+                        sys.exit(f"Stopping: could not save records - {e}")
                     got_any = True
                 time.sleep(0.3)
         empty_streak = 0 if got_any else empty_streak + 1
