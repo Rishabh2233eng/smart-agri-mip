@@ -1,0 +1,10 @@
+commodity,market,start,end,days,observed_%
+Onion,Azadpur,2022-01-01,2025-01-04,1100,
+Onion,Faridabad,2022-01-01,2025-01-04,1100,
+Onion,Ghazipur,2022-01-01,2025-01-04,1100,
+Tomato,Azadpur,2022-01-01,2025-01-04,1100,
+Tomato,Faridabad,2022-01-01,2025-01-04,1100,
+Tomato,Ghazipur,2022-01-01,2025-01-04,1100,
+Wheat,Azadpur,2022-01-01,2025-01-04,1100,
+Wheat,Faridabad,2022-01-01,2025-01-04,1100,
+Wheat,Ghazipur,2022-01-01,2025-01-04,1100,

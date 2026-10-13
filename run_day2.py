@@ -9,21 +9,29 @@ import matplotlib.pyplot as plt
 from src import config as C
 from src.data import make_synthetic, series
 from src.realdata import load_real
+from src.db import load_from_db
 from src.forecast import run_forecasts, metrics
 from src.decision import recommend, backtest, HORIZONS
 
 pd.set_option("display.width", 220)
 pd.set_option("display.max_columns", 30)
 
-S = load_real("data/real") if os.path.isdir("data/real") else None
+# ---- data source priority: database -> CSV folder -> synthetic ----
+S = load_from_db()
+SRC = "database"
+if not S and os.path.isdir("data/real"):
+    S = load_real("data/real")
+    SRC = "csv folder"
+
 if not S:
     TAG = "synthetic"
-    print("\n*** NO REAL DATA FOUND in data/real -> using SYNTHETIC data. Do NOT use these numbers in the paper. ***\n")
+    print("\n*** NO REAL DATA FOUND (database or data/real) -> using SYNTHETIC data. "
+          "Do NOT use these numbers in the paper. ***\n")
     df = make_synthetic()
     S = {(c, m): series(df, c, m) for c in C.COMMODITIES for m in C.MARKETS}
 else:
     TAG = "real"
-    print("\nUsing REAL data from data/real\n")
+    print(f"\nUsing REAL data from the {SRC}\n")
 
 OUT = f"outputs/{TAG}"
 os.makedirs(OUT, exist_ok=True)
@@ -57,7 +65,8 @@ for c in C.COMMODITIES:
     bt_frames.append(backtest(c, fc, mk, C.HOME))
 
 if not results:
-    sys.exit("No usable series. Check data/real files and the aliases in src/config.py")
+    sys.exit("No usable series yet. Run:  python data_tools.py stats  to see how many days you have, "
+             "then fix HOME / MARKETS / aliases in src/config.py")
 
 mt = pd.DataFrame(metric_rows).round(2)
 mt.to_csv(f"{OUT}/forecast_metrics.csv", index=False)

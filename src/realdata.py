@@ -7,13 +7,21 @@ import pandas as pd
 from .config import ALIASES, MARKET_ALIASES
 
 RENAME = {
-    "arrival_date": "date", "price date": "date", "reported date": "date", "date": "date",
+    "arrival_date": "date", "price date": "date", "reported date": "date",
+    "report date": "date", "date": "date",
     "commodity": "commodity", "commodity name": "commodity",
-    "market": "market", "market name": "market", "mandi": "market",
-    "modal_price": "modal_price", "modal price": "modal_price",
+    "market": "market", "market name": "market", "market center": "market", "mandi": "market",
+    "state": "state", "state name": "state",
+    "district": "district", "district name": "district",
+    "min_price": "min_price", "min price": "min_price", "minimum price": "min_price",
+    "min": "min_price", "minimum": "min_price",
+    "max_price": "max_price", "max price": "max_price", "maximum price": "max_price",
+    "max": "max_price", "maximum": "max_price",
+    "modal_price": "modal_price", "modal price": "modal_price", "modal": "modal_price",
     "modal price (rs./quintal)": "modal_price",
-    "arrivals_qtl": "arrivals_qtl", "arrivals": "arrivals_tonnes",
-    "arrivals (tonnes)": "arrivals_tonnes", "rainfall_mm": "rainfall_mm",
+    "arrivals_qtl": "arrivals_qtl", "arrivals": "arrivals_tonnes", "arrivals (tonnes)": "arrivals_tonnes",
+    "arrivals_tonnes": "arrivals_tonnes", "quantity": "arrivals_tonnes",
+    "rainfall_mm": "rainfall_mm",
 }
 
 
