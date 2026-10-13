@@ -1,10 +1,10 @@
-﻿"""Live price lookup with alternatives and fallbacks. Always reports date, source and age."""
+﻿"""Live price lookup with alternatives, quality checks and fallbacks. Always reports date, source and age."""
 import os
 import datetime as dt
 import pandas as pd
 import requests
 from dotenv import load_dotenv
-from . import db
+from . import db, quality
 
 load_dotenv(os.path.join(db.BASE, ".env"))
 KEY = os.environ.get("DATAGOV_API_KEY")
@@ -61,6 +61,8 @@ def _fetch(commodity, state=None):
         db.upsert(raw, "live_lookup")              # every lookup grows the history
     except ValueError:
         return None
+    if state:                                      # enforce the state filter ourselves
+        d = d[d["state"].str.lower() == state.lower().strip()]
     return d
 
 
@@ -81,12 +83,22 @@ def _db_latest(commodity, market):
             "age_days": _age(last["date"].iloc[0]), "is_live": False}
 
 
+def _ranked(today):
+    clean = today[~today["suspect"]]
+    prices = clean.groupby("market")["modal_price"].mean().round(0).sort_values(ascending=False)
+    excluded = int(today[today["suspect"]]["market"].nunique())
+    return prices, excluded
+
+
 def lookup(commodity, market, state=None):
-    out = {"hit": None, "stored": None, "api_ok": False, "states": {}, "others": [], "state_markets": []}
+    out = {"hit": None, "stored": None, "api_ok": False, "states": {}, "others": [],
+           "state_markets": [], "excluded": 0}
     d = _fetch(commodity, state)
     if d is not None:
         out["api_ok"] = True
         if not d.empty:
+            d = quality.mark_suspect(d)
+            latest = d["date"].max()
             hit = _match(d, market)
             if not hit.empty:
                 last = hit[hit["date"] == hit["date"].max()]
@@ -94,16 +106,19 @@ def lookup(commodity, market, state=None):
                 out["hit"] = {"price": float(last["modal_price"].mean()), "date": last["date"].iloc[0],
                               "market": last["market"].iloc[0], "state": last["state"].iloc[0],
                               "age_days": age, "is_live": age <= LIVE_MAX_AGE_DAYS,
-                              "source": "live API", "n_varieties": len(last)}
-                same = d[(d["state"] == out["hit"]["state"]) & (d["date"] == d["date"].max())]
-                prices = same.groupby("market")["modal_price"].mean().round(0).sort_values(ascending=False)
+                              "source": "live API", "n_varieties": len(last),
+                              "suspect": bool(last["suspect"].mean() > 0.5),
+                              "ref": float(last["ref"].iloc[0])}
+                today = d[(d["state"] == out["hit"]["state"]) & (d["date"] == latest)]
+                prices, out["excluded"] = _ranked(today)
                 out["others"] = [(m, float(p)) for m, p in prices.items()
                                  if m != out["hit"]["market"]][:5]
             else:
                 out["states"] = (d.groupby("state")["market"].nunique()
                                  .sort_values(ascending=False).head(8).to_dict())
                 if state:
-                    prices = d.groupby("market")["modal_price"].mean().round(0).sort_values(ascending=False)
+                    today = d[d["date"] == latest]
+                    prices, out["excluded"] = _ranked(today)
                     out["state_markets"] = [(m, float(p)) for m, p in prices.items()][:10]
     if out["hit"] is None:
         out["stored"] = _db_latest(commodity, market)
