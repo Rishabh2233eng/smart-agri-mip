@@ -32,7 +32,7 @@ if st.button("Get price", type="primary"):
                        + (f"{r['excluded']} market(s) left out because their quotes look like errors."
                           if r["excluded"] else ""))
     else:
-        st.error("The live API could not be reached right now." if not r["api_ok"]
+        st.error(("The live API could not be reached right now: " + r["error"]) if not r["api_ok"]
                  else f"No {crop} price for '{market}' in today's feed.")
         if r["stored"]:
             s_ = r["stored"]
@@ -64,3 +64,4 @@ else:
 st.subheader("Forecast")
 st.info("Not available yet. Forecasting needs a continuous recent price window (about 30 days) and real "
         "history for training. This panel will show calibrated 7 and 14 day forecasts once that data is loaded.")
+

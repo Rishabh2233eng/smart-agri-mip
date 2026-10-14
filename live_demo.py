@@ -20,7 +20,7 @@ if h:
         print(f"({r['excluded']} market(s) left out of this list because their quotes look like errors.)")
 else:
     if not r["api_ok"]:
-        print("\nThe live API could not be reached right now.")
+        print("\nThe live API could not be reached right now: " + r["error"])
     else:
         print(f"\nNo {c} price for '{m}' in today's feed.")
     if r["stored"]:
@@ -38,3 +38,4 @@ else:
         print("Run again and type one of these states to list its markets.")
     elif r["api_ok"]:
         print(f"{c} is not reported anywhere in today's feed" + (f" for {s}." if s else "."))
+
