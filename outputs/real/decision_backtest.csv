@@ -1,0 +1,9 @@
+strategy,commodity,avg_net_Rs_per_qtl,p10_net_Rs_per_qtl,regret_vs_oracle,uplift_vs_sell_now_%,gain_vs_naive_Rs,gain_vs_naive_CI95,n_decisions
+Naive (no forecast),Onion,1972.77,1260.46,41.33,0.86,0.0,"[0.0, 0.0]",17
+Forecast lam=0.0,Onion,1968.67,1288.54,45.43,0.65,-4.1,"[-43.5, 33.8]",17
+Forecast lam=0.25,Onion,1988.61,1288.54,25.49,1.67,15.84,"[-1.1, 42.8]",17
+Forecast lam=0.5,Onion,1978.05,1288.54,36.05,1.13,5.29,"[-1.7, 17.6]",17
+Forecast lam=0.75,Onion,1972.2,1256.55,41.91,0.83,-0.57,"[-1.7, 0.0]",17
+Forecast lam=1.0,Onion,1972.77,1260.46,41.33,0.86,0.0,"[0.0, 0.0]",17
+Sell now at home,Onion,1956.0,1260.46,58.1,0.0,-16.77,"[-41.7, 0.0]",17
+Oracle (perfect hindsight),Onion,2014.1,1288.54,0.0,2.97,41.33,"[11.7, 76.7]",17
