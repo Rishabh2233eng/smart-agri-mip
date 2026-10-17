@@ -2,7 +2,6 @@
 from src import casestudy
 import src.config as C
 
-st.set_page_config(page_title="Market explorer", layout="wide")
 st.title("Market explorer (real history)")
 st.caption("Real daily mandi prices from public archives. Gaps up to 7 days are interpolated. Data ends where shown.")
 
@@ -19,7 +18,7 @@ mk = sorted(m for (c, m) in S if c == crop)
 sel = st.multiselect("Markets", mk, default=mk[:4])
 if not sel:
     st.info("Pick at least one market."); st.stop()
-wide = pd.concat({m: S[(crop, m)]["modal_price"] for m in sel}, axis=1)
+wide = pd.concat({m: pd.Series(S[(crop, m)]["modal_price"].to_numpy(), index=S[(crop, m)].index) for m in sel}, axis=1)
 lo, hi = wide.index.min().date(), wide.index.max().date()
 rng = st.slider("Date range", lo, hi, (lo, hi))
 wide = wide.loc[str(rng[0]):str(rng[1])]
@@ -40,7 +39,8 @@ st.bar_chart((s.groupby(s.index.month).mean() / s.mean()).rename("price index"))
 home = S.get((crop, C.HOME))
 if home is not None:
     st.subheader(f"Price gap versus {C.HOME} (positive = higher than home)")
-    gap = wide.sub(home["modal_price"].reindex(wide.index), axis=0)
+    gap = wide.sub(pd.Series(home["modal_price"].to_numpy(), index=home.index).reindex(wide.index), axis=0)
     gap = gap.drop(columns=[C.HOME], errors="ignore")
     if gap.shape[1]:
         st.line_chart(gap)
+

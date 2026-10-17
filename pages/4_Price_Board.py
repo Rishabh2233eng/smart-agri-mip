@@ -1,6 +1,5 @@
 ﻿import sqlite3, pandas as pd, streamlit as st
 
-st.set_page_config(page_title="Price board", layout="wide")
 st.title("All-commodity price board (real data)")
 st.caption("Prices collected nightly from the government mandi feed, in Rs per quintal as reported. "
            "Quotes far from the day's median are flagged and left out of rankings. Varieties and grades are mixed.")

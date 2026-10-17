@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from src import casestudy
 import src.config as C
 
-st.set_page_config(page_title="Forecast and decision", layout="wide")
 st.title("Forecast and selling decision")
 st.warning("Historical case study. Built on real daily mandi prices up to the last date shown below, "
            "NOT today's prices. For today's live price use the main page. Costs and distances are placeholder assumptions.")
