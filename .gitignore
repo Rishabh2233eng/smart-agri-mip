@@ -2,3 +2,9 @@
 venv/
 __pycache__/
 data/mandi.db
+archive/
+backup_before_ui/
+install_ui.py
+.env
+__pycache__/
+venv/

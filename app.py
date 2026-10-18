@@ -10,28 +10,50 @@ GREEN, AMBER, DARK, RED, GREY, SAND = "#2F7D5B", "#E0A526", "#14231F", "#B5443A"
 CYCLE = [GREEN, AMBER, "#3C6E9F", RED, "#7B5EA7", "#2A9D8F", "#8D6E63", "#546E7A"]
 
 st.markdown("""<style>
-#MainMenu {visibility: hidden;} footer {visibility: hidden;}
-.block-container {padding-top: 2rem; max-width: 1200px;}
-.hero {background: linear-gradient(135deg,#14231F 0%,#2F7D5B 100%); padding:30px 34px; border-radius:18px; margin-bottom:22px;}
-.hero h1 {color:#F6F4EC; font-size:2.1rem; margin:0 0 6px 0; padding:0;}
-.hero p {color:#D6E3DC; font-size:1.05rem; margin:0;}
-.card {background:#fff; border:1px solid #E1DED0; border-radius:16px; padding:20px 22px; height:100%;}
-.card h4 {margin:0 0 8px 0; color:#2F7D5B;} .card p {margin:0; color:#33433D;}
-.price {font-size:3rem; font-weight:700; color:#14231F; line-height:1.15;}
-.badge {display:inline-block; padding:3px 12px; border-radius:999px; font-size:.85rem; font-weight:600; margin-left:8px;}
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
+html, body, [class*="css"], .stApp {font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;}
+#MainMenu {visibility: hidden;} footer {visibility: hidden;} header[data-testid="stHeader"] {background: transparent;}
+.stApp {background: radial-gradient(circle at 12% 8%, rgba(47,125,91,.14), transparent 38%), radial-gradient(circle at 92% 4%, rgba(224,165,38,.16), transparent 34%), radial-gradient(circle at 80% 95%, rgba(60,110,159,.08), transparent 40%), linear-gradient(180deg,#F8F6EE 0%,#EDF2EA 100%); background-attachment: fixed;}
+.block-container {padding-top: 1.6rem; max-width: 1240px;}
+[data-testid="stSidebar"] {background: linear-gradient(180deg,#10201B 0%,#1B3A2E 100%);}
+[data-testid="stSidebar"] * {color: #E6F0EA !important;}
+[data-testid="stSidebar"] a {border-radius: 10px;}
+[data-testid="stSidebar"] a:hover {background: rgba(255,255,255,.08);}
+h1, h2, h3 {color: #14231F; letter-spacing: -0.01em; font-weight: 800;}
+@keyframes rise {from {opacity:0; transform: translateY(14px);} to {opacity:1; transform: translateY(0);}}
+@keyframes drift {0% {background-position: 0% 50%;} 50% {background-position: 100% 50%;} 100% {background-position: 0% 50%;}}
+.hero {position:relative; overflow:hidden; background: linear-gradient(120deg,#10201B,#1F5A42,#2F7D5B,#1F5A42); background-size: 300% 300%; animation: drift 14s ease infinite, rise .6s ease both; padding:38px 42px; border-radius:22px; margin-bottom:26px; box-shadow: 0 18px 40px rgba(20,35,31,.22);}
+.hero:before {content:""; position:absolute; right:-60px; top:-70px; width:300px; height:300px; border-radius:50%; background: radial-gradient(circle, rgba(224,165,38,.55), transparent 65%);}
+.hero:after {content:""; position:absolute; right:140px; bottom:-120px; width:260px; height:260px; border-radius:50%; background: radial-gradient(circle, rgba(255,255,255,.14), transparent 65%);}
+.hero h1 {position:relative; color:#FFFDF5; font-size:2.35rem; font-weight:800; margin:0 0 8px 0; padding:0;}
+.hero p {position:relative; color:#D9E8DF; font-size:1.06rem; margin:0; max-width:760px; line-height:1.55;}
+.chips {position:relative; margin-top:16px;}
+.chip {display:inline-block; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.25); color:#F2F7F3; padding:4px 13px; border-radius:999px; font-size:.8rem; font-weight:600; margin:0 8px 6px 0; backdrop-filter: blur(4px);}
+.card {background: rgba(255,255,255,.86); backdrop-filter: blur(6px); border:1px solid rgba(225,222,208,.9); border-left:5px solid #2F7D5B; border-radius:16px; padding:20px 22px; height:100%; box-shadow: 0 6px 20px rgba(20,35,31,.06); transition: transform .2s ease, box-shadow .2s ease; animation: rise .5s ease both;}
+.card:hover {transform: translateY(-4px); box-shadow: 0 14px 30px rgba(20,35,31,.13);}
+.card h4 {margin:0 0 8px 0; color:#2F7D5B; font-weight:800;} .card p {margin:0; color:#33433D; line-height:1.55;}
+.price {font-size:3rem; font-weight:800; color:#14231F; line-height:1.15;}
+.badge {display:inline-block; padding:3px 12px; border-radius:999px; font-size:.85rem; font-weight:700; margin-left:8px; vertical-align:middle;}
 .live {background:#DFF2E8; color:#1B6B45;} .stale {background:#FBE9C6; color:#7A5200;} .warn {background:#F8D9D4; color:#8A2B1E;}
-.kpi {background:#fff; border:1px solid #E1DED0; border-radius:14px; padding:14px 18px;}
-.kpi .v {font-size:1.7rem; font-weight:700; color:#14231F;} .kpi .l {color:#5B6B65; font-size:.85rem;}
+.kpi {background: rgba(255,255,255,.88); border:1px solid rgba(225,222,208,.9); border-top:4px solid #E0A526; border-radius:14px; padding:14px 18px; box-shadow: 0 4px 14px rgba(20,35,31,.06); transition: transform .2s ease; animation: rise .5s ease both;}
+.kpi:hover {transform: translateY(-3px);}
+.kpi .v {font-size:1.5rem; white-space:nowrap; font-weight:800; color:#14231F; line-height:1.2;} .kpi .l {color:#5B6B65; font-size:.82rem; margin-top:2px;}
 .flow {display:flex; align-items:stretch; gap:10px; flex-wrap:wrap; margin:8px 0 24px;}
-.step {flex:1; min-width:150px; background:#fff; border:1px solid #E1DED0; border-radius:14px; padding:14px 16px;}
+.step {flex:1; min-width:150px; background: rgba(255,255,255,.88); border:1px solid #E1DED0; border-radius:14px; padding:14px 16px; box-shadow: 0 4px 14px rgba(20,35,31,.05); transition: transform .2s ease;}
+.step:hover {transform: translateY(-3px);}
 .step b {display:block; color:#2F7D5B; margin-bottom:4px;} .step span {font-size:.85rem; color:#33433D;}
-.arrow {align-self:center; color:#2F7D5B; font-size:1.4rem;}
+.arrow {align-self:center; color:#E0A526; font-size:1.5rem; font-weight:800;}
+[data-testid="stPlotlyChart"] {background: rgba(255,255,255,.80); border:1px solid rgba(225,222,208,.9); border-radius:16px; padding:6px; box-shadow: 0 4px 16px rgba(20,35,31,.05);}
+[data-testid="stDataFrame"] {border-radius:12px; overflow:hidden;}
+.stButton > button, .stDownloadButton > button {background:#2F7D5B; color:white; border:0; border-radius:10px; font-weight:700; padding:.5rem 1.1rem;}
+.stButton > button:hover, .stDownloadButton > button:hover {background:#256448; color:white;}
 </style>""", unsafe_allow_html=True)
 
 
 # ---------- small UI helpers ----------
-def hero(title, sub):
-    st.markdown(f'<div class="hero"><h1>{title}</h1><p>{sub}</p></div>', unsafe_allow_html=True)
+def hero(title, sub, chips=None):
+    c = "".join(f'<span class="chip">{x}</span>' for x in (chips or []))
+    st.markdown(f'<div class="hero"><h1>{title}</h1><p>{sub}</p><div class="chips">{c}</div></div>', unsafe_allow_html=True)
 
 def kpi(col, value, label):
     col.markdown(f'<div class="kpi"><div class="v">{value}</div><div class="l">{label}</div></div>', unsafe_allow_html=True)
@@ -49,7 +71,7 @@ def _base(fig, h=360, title=None):
     fig.update_layout(height=h, margin=dict(l=10, r=10, t=60 if title else 24, b=10),
                       paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                       font=dict(family="Segoe UI, Inter, sans-serif", color=DARK),
-                      legend=dict(orientation="h", y=1.12, x=0), hoverlabel=dict(bgcolor="white"))
+                      legend=dict(orientation="h", x=1, xanchor="right", y=1.03, yanchor="bottom"), hoverlabel=dict(bgcolor="white"))
     if title:
         fig.update_layout(title=dict(text=title, font=dict(size=16, color=DARK)))
     fig.update_xaxes(gridcolor=SAND, zeroline=False)
@@ -178,10 +200,37 @@ def db_commodity_df(name):
     return out.dropna(subset=["date", "modal"])
 
 
+
+def market_map(r):
+    try:
+        from src.casestudy import COORDS
+        import numpy as np
+        x = r[r.h == 14].copy()
+        pts = []
+        for _, row in x.iterrows():
+            k = str(row["market"]).upper()
+            v = COORDS.get(k) or COORDS.get(row["market"])
+            if v:
+                pts.append((row["market"], float(v[0]), float(v[1]), float(row["gain_pts"])))
+        if not pts:
+            return
+        d = pd.DataFrame(pts, columns=["market", "lat", "lon", "gain"])
+        f = go.Figure(go.Scattergeo(lat=d.lat, lon=d.lon, text=d.market, mode="markers+text", textposition="top center",
+                                    marker=dict(size=16 + 4 * d.gain.abs().clip(upper=5), color=d.gain, colorscale=[[0, RED], [0.5, "#F2E9C9"], [1, GREEN]],
+                                                cmid=0, line=dict(width=1, color="white"), colorbar=dict(title="gain (pts)")),
+                                    hovertemplate="%{text}<br>14 day gain vs naive: %{marker.color:+.2f} pts<extra></extra>"))
+        f.update_geos(scope="asia", center=dict(lat=24, lon=79), projection_scale=3.6, showcountries=True, countrycolor="#B9C4BC",
+                      showland=True, landcolor="#F3F0E4", showocean=True, oceancolor="#E2EEF3", bgcolor="rgba(0,0,0,0)", showframe=False)
+        st.subheader("Where the model helps (14 day forecast, per market)")
+        st.plotly_chart(_base(f, 460), width="stretch")
+    except Exception:
+        pass
+
 # ---------- page: overview ----------
 def page_home():
     hero("Smart Agri Market Intelligence",
-         "Real mandi prices, forecasts with honest uncertainty, and selling advice for farmers. Final-year major project, IILM University.")
+         "Real mandi prices, forecasts with honest uncertainty, and selling advice for farmers. Final-year major project, IILM University.",
+         ["Live government data", "All commodities", "Calibrated 80% intervals", "Cost-aware decisions", "Real-data evaluation"])
     s = db_summary()
     k = st.columns(5)
     if s:
@@ -220,6 +269,7 @@ def page_home():
         l, rt = st.columns(2)
         l.plotly_chart(gain_chart(r, "Error reduction vs naive forecast"), width="stretch")
         rt.plotly_chart(coverage_chart(r, "80% interval coverage"), width="stretch")
+        market_map(r)
         st.caption("Preliminary: bars whose error bars cross zero are not yet statistically proven. More history is being added.")
         ab = "outputs/real/ablation_weather.csv"
         if os.path.exists(ab):
