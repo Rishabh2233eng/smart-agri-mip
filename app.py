@@ -506,12 +506,138 @@ def page_about():
 """)
 
 
+
+# ---------- page: market pulse ----------
+@st.cache_data(ttl=600)
+def pulse_table():
+    if not db_ok():
+        return pd.DataFrame()
+    c, t, m = _open()
+    if not c or not all([m["C"], m["M"], m["D"], m["P"]]):
+        return pd.DataFrame()
+    d = pd.read_sql_query(f'SELECT "{m["C"]}" c, "{m["M"]}" m, "{m["D"]}" d, "{m["P"]}" p' + (f', "{m["S"]}" s' if m["S"] else "") + f' FROM "{t}"', c)
+    c.close()
+    d["d"] = parse_dates(d["d"]); d["p"] = pd.to_numeric(d["p"], errors="coerce")
+    if "s" not in d: d["s"] = ""
+    return d.dropna(subset=["d", "p"]).query("p > 0")
+
+def page_pulse():
+    hero("Market pulse", "What is moving in Indian mandis right now: biggest price changes, state comparison, and whether today's price is high or low.")
+    d = pulse_table()
+    if d.empty:
+        st.info("No data yet. Run python collect_all.py."); return
+    g = d.groupby(["c", "d"])["p"].agg(med="median", n="count").reset_index()
+    rows = []
+    for c, x in g.groupby("c"):
+        x = x[x.n >= 5].sort_values("d")
+        if len(x) >= 2:
+            a, b = x.iloc[-2], x.iloc[-1]
+            rows.append((c, b.med, (b.med / a.med - 1) * 100, b.n, str(b.d.date())))
+    mv = pd.DataFrame(rows, columns=["commodity", "price_now", "change_pct", "markets", "date"])
+    mv = mv[mv.change_pct.abs() < 60]
+    st.subheader("Biggest movers since the previous collection")
+    if mv.empty:
+        st.info("Need at least two collected days to show movers.")
+    else:
+        l, r = st.columns(2)
+        up = mv.nlargest(8, "change_pct").sort_values("change_pct")
+        dn = mv.nsmallest(8, "change_pct").sort_values("change_pct", ascending=False)
+        for col, x, color, ttl in ((l, up, GREEN, "Rising"), (r, dn, RED, "Falling")):
+            f = go.Figure(go.Bar(x=x.change_pct, y=x.commodity, orientation="h", marker_color=color,
+                                 hovertemplate="%{y}: %{x:+.1f}%<extra></extra>"))
+            f.update_xaxes(title="Change in national median (%)")
+            col.plotly_chart(_base(f, 330, ttl), width="stretch")
+        st.download_button("Download movers (CSV)", mv.round(2).to_csv(index=False), "movers.csv", "text/csv")
+    st.subheader("Compare states and judge today's price")
+    names = sorted(d["c"].unique())
+    crop = st.selectbox("Commodity", names, index=names.index("Onion") if "Onion" in names else 0, key="pulse_crop")
+    x = d[d.c == crop]
+    last = x.d.max()
+    today = x[x.d == last]
+    med = today.p.median()
+    today = today[(today.p < 2 * med) & (today.p > 0.5 * med)]
+    stt = today[today.s.astype(str) != ""].groupby("s")["p"].median().sort_values()
+    if len(stt) > 1:
+        st.plotly_chart(bar_compare(stt.tail(20), title=f"{crop}: median price by state on {last.date()}"), width="stretch")
+    mk = sorted(x.m.unique())
+    m = st.selectbox("Your market", mk, key="pulse_mkt")
+    hist = x[x.m == m].groupby("d")["p"].median()
+    if len(hist) < 7:
+        st.info(f"Only {len(hist)} days of history for this market so far. The high/low verdict unlocks after 7 days and gets better every night.")
+    else:
+        now = hist.iloc[-1]
+        pct = (hist <= now).mean() * 100
+        verdict = "HIGH: a good time to sell" if pct >= 75 else ("LOW: consider waiting" if pct <= 25 else "NORMAL")
+        k = st.columns(3)
+        kpi(k[0], f"Rs {now:,.0f}", f"latest price at {m}")
+        kpi(k[1], f"{pct:.0f}th", f"percentile of its own {len(hist)}-day history")
+        kpi(k[2], verdict.split(":")[0], verdict.split(": ")[-1] if ":" in verdict else "within its usual range")
+        st.plotly_chart(lines(hist.to_frame(m)), width="stretch")
+    st.caption("Based on prices this system has collected. It is a guide, not a guarantee.")
+
+
+# ---------- page: research results ----------
+def _pool(df, h):
+    import numpy as np
+    from math import comb
+    g = df[df.h == h].gain_pts.dropna().to_numpy()
+    if len(g) == 0:
+        return None
+    rng = np.random.default_rng(0)
+    b = [rng.choice(g, len(g)).mean() for _ in range(4000)]
+    k, n = int((g > 0).sum()), len(g)
+    p = min(1.0, 2 * sum(comb(n, i) for i in range(k, n + 1)) / 2 ** n)
+    return dict(h=h, markets=n, mean_gain=g.mean(), lo=float(np.percentile(b, 2.5)), hi=float(np.percentile(b, 97.5)), better=f"{k}/{n}", p=p)
+
+def page_research():
+    hero("Research results", "Honest evaluation on real history: forecast accuracy, interval reliability, and statistical tests. Everything here is computed from real prices.")
+    p = "outputs/real/eval_all_markets.csv"
+    if not os.path.exists(p):
+        st.info("Run python eval_all.py to generate results."); return
+    r = pd.read_csv(p)
+    st.subheader("Pooled result across all markets")
+    pr = [x for x in (_pool(r, 7), _pool(r, 14)) if x]
+    k = st.columns(len(pr))
+    for col, x in zip(k, pr):
+        kpi(col, f"{x['mean_gain']:+.2f} pts", f"{x['h']} day: mean error reduction vs naive, 95% CI [{x['lo']:.2f}, {x['hi']:.2f}], better in {x['better']}, sign test p={x['p']:.3f}")
+    st.caption("Markets are correlated, so these tests are indicative rather than strict. A confidence interval that excludes zero supports a real gain.")
+    l, rt = st.columns(2)
+    l.plotly_chart(gain_chart(r, "Error reduction per market"), width="stretch")
+    rt.plotly_chart(coverage_chart(r, "80% interval coverage per market"), width="stretch")
+    with st.expander("Per-market table", expanded=True):
+        st.dataframe(r.round(2), hide_index=True, width="stretch")
+        st.download_button("Download results (CSV)", r.round(3).to_csv(index=False), "eval_all_markets.csv", "text/csv")
+    ab = "outputs/real/ablation_weather.csv"
+    if os.path.exists(ab):
+        a = pd.read_csv(ab)
+        st.subheader("Does real rainfall help?")
+        ps = [x for x in (_pool(a, 7), _pool(a, 14)) if x]
+        k = st.columns(len(ps))
+        for col, x in zip(k, ps):
+            kpi(col, f"{x['mean_gain']:+.2f} pts", f"{x['h']} day effect of rainfall, 95% CI [{x['lo']:.2f}, {x['hi']:.2f}]")
+        st.plotly_chart(gain_chart(a, "Error reduction from adding rainfall"), width="stretch")
+    dp = "outputs/real/decision_all_crops.csv"
+    if os.path.exists(dp):
+        with st.expander("Decision engine backtest"):
+            st.dataframe(pd.read_csv(dp).round(2), hide_index=True, width="stretch")
+    st.subheader("Method")
+    st.markdown("""
+- **Model:** quantile gradient boosting predicts the 7 and 14 day price change at the 10th, 50th and 90th percentiles.
+- **Uncertainty:** conformalized quantile regression with a rolling 90-day window targets 80% coverage.
+- **Baselines:** naive (last price), ridge regression and random forest.
+- **Evaluation:** time-ordered 60/20/20 split with a gap, scored only on days with a real quote, 95% block-bootstrap intervals.
+- **Limits:** about 2.5 years of onion history, costs and distances are placeholders, results are preliminary.
+""")
+
+
 pg = st.navigation([
     st.Page(page_home, title="Overview", icon="🏠", default=True),
     st.Page(page_live, title="Live price", icon="💹"),
     st.Page(page_board, title="Price board", icon="📊"),
     st.Page(page_explorer, title="Market explorer", icon="🗺️"),
+    st.Page(page_pulse, title="Market pulse", icon="\U0001F4C8"),
     st.Page(page_forecast, title="Forecast and decision", icon="🔮"),
+    st.Page(page_research, title="Research results", icon="\U0001F9EA"),
     st.Page(page_about, title="About and limits", icon="ℹ️"),
 ])
 st.sidebar.caption("SmartAgri Market Intelligence Platform\nFinal-year major project, IILM University")
